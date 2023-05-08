@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">ClipIS</string>
+    <string name="text_save">Поиск по тексту</string>
+    <string name="text_load">Загрузить фотографии заново</string>
+    <string name="save_text_button">Поиск по сохраненным изображениям</string>
+    <string name="load_text_button">Загрузить заново изображения для поиска</string>
+    <string name="calendar_text_button">Выбор временного периода поиска</string>
+</resources>
