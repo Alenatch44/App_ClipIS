@@ -14,7 +14,7 @@
 
 ```
 Скачайте Android Studio->загрузите zip-файл или папку git clone'App_ClipIS'-> Откройте проект с помощью Android Studio-> подключитесь к своему телефону для компиляции с помощью USB
-Скачать [папку intermediates](https://disk.yandex.ru/d/pNxglxQqI4y6gw) и заменить содержимое папки App_ClipIS\app\build\intermediates на содержимое папки "intermediates"
+Скачать папку "intermediates" по ссылке: https://disk.yandex.ru/d/pNxglxQqI4y6gw и заменить содержимое папки App_ClipIS\app\build\intermediates на содержимое папки "intermediates"
 ```
 
 ### 3.2 Дерево каталогов
