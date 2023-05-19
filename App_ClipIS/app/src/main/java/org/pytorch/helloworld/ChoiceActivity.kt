@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Environment
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -36,7 +37,7 @@ class ChoiceActivity : AppCompatActivity() {
     private var mStartDate: Long? = null
     private var mEndDate: Long? = null
     private var sharedata: ShareData? = null
-    private var Image_path: List<String>? = null
+    private var Image_path: MutableList<File>? = null
     private var startDateString: String? = null
     private var endDateString: String? = null
 
@@ -132,11 +133,12 @@ class ChoiceActivity : AppCompatActivity() {
         // Get shared preferences
         mSharedPref = getSharedPreferences("myPrefs", MODE_PRIVATE)
         mSharedPref_path = getSharedPreferences("myPrefs_images_path", MODE_PRIVATE)
-        sharedata = application as ShareData
+        //sharedata = application as ShareData
 
         // Get photo urls and image paths from shared preferences if they exist
         val json = mSharedPref?.getString("photo_urls", "")
         val json_path = mSharedPref_path?.getString("images_path", "")
+        //val json_load = mSharedPref_load?.getString("load", "")
 
         // If photo urls and image paths are found, load them into the app and start MainActivity
         if (mSharedPref_path != null && mSharedPref_path!!.contains("images_path") && json != null && json_path != null) {
@@ -145,10 +147,13 @@ class ChoiceActivity : AppCompatActivity() {
                 .create()
             val Image = gson.fromJson(json, Array<FloatArray?>::class.java)
             sharedata!!.imageSetFeature = Image
+
             val gson_path = Gson()
-            val type_path = object : TypeToken<List<String?>?>() {}.type
-            Image_path = gson_path.fromJson<List<String>>(json_path, type_path)
+            val type_path = object : TypeToken<MutableList<File>>() {}.type
+            Image_path = gson_path.fromJson<MutableList<File>>(json_path, type_path)
             sharedata!!.originImagePath = Image_path
+
+
             val intent = Intent(this, MainActivity::class.java)
             val options = ActivityOptions.makeCustomAnimation(
                 this,

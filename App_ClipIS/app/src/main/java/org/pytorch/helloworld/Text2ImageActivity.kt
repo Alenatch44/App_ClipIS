@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
+import java.util.*
+import kotlin.collections.ArrayList
 
 class Text2ImageActivity : AppCompatActivity() {
     private val data: MutableList<Bean> = ArrayList()
@@ -30,6 +32,8 @@ class Text2ImageActivity : AppCompatActivity() {
         if (Showsize < 10) {
             Showsize = 10
         }
+
+        //bean.image = sharedata.imageSet[0]
         // This creates a Bean object for each image and adds it to the data list
         for (i in 0 until Showsize) {
             val bean = Bean()

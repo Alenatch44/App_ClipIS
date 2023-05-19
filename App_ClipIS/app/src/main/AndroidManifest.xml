@@ -49,7 +49,11 @@
         </provider>
 
         <activity
-            android:name=".Text2ImageActivity" >
+            android:name=".Text2ImageActivity"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
         </activity>
 
 <!--        android:theme="@style/AppTheme.StartingWindowTheme"-->

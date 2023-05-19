@@ -6,7 +6,7 @@ import java.util.*
 class Tokenizer(filename: String?) {
     init {
         tokenTool = TokenTool()
-        val file = File(filename)
+        val file = filename?.let { File(it) }
         val s = Scanner(file)
         encode_map = HashMap()
         merges = ArrayList()
@@ -43,7 +43,7 @@ class Tokenizer(filename: String?) {
         for (i in merges) {
             var t = String()
             for (j in i) {
-                t = t + j
+                t += j
             }
             vocab.add(t)
         }

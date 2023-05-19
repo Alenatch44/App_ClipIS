@@ -17,11 +17,13 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            crunchPngs false
         }
     }
 
     defaultConfig {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        multiDexEnabled true
     }
 
     compileOptions {
@@ -58,7 +60,7 @@ dependencies {
     implementation 'com.jakewharton.threetenabp:threetenabp:1.2.4'
     implementation 'com.wdullaer:materialdatetimepicker:4.2.3'
     implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'org.pytorch:pytorch_android_lite:1.9.0'
+    //implementation 'org.pytorch:pytorch_android_lite:1.9.0'
     implementation 'org.pytorch:pytorch_android_lite:1.10.0'
     implementation 'org.pytorch:pytorch_android_torchvision:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
@@ -67,7 +69,15 @@ dependencies {
     implementation 'com.github.ForgetAll:LoadingDialog:v1.0.1'
     implementation 'com.google.code.gson:gson:2.8.9'
     implementation 'androidx.core:core-ktx:+'
-    implementation"org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.annotation:annotation-jvm:1.6.0-alpha01'
+    //classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    implementation 'androidx.annotation:annotation-jvm:1.7.0-alpha02'
+    implementation "androidx.annotation:annotation-experimental:1.4.0-dev01"
+    implementation 'com.android.support:multidex:2.0.1'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+
+
+
+
 
 }

@@ -19,12 +19,10 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.motion.utils.Oscillator
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.xiasuhuei321.loadingdialog.view.LoadingDialog
 import org.pytorch.*
-import org.pytorch.torchvision.TensorImageUtils
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -32,8 +30,9 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var ImageFeatureSet: Array<FloatArray?>
+class MainActivity : AppCompatActivity(){
+
+    private var isToastShown = false
     var mSharedPref: SharedPreferences? = null
     var mSharedPref_image: SharedPreferences? = null
     private val ImageSet: MutableList<Bitmap?> = ArrayList()
@@ -46,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private var startDateStr: String? = null
     private var endDateStr: String? = null
     private var progressBar: ProgressBar? = null
+    private var ShareImageSet: List<Bitmap?> = ArrayList()
 
     // Thread class for loading images
     inner class MyThread_load_image(start: Int, end: Int) : Thread() {
@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("MissingInflatedId")
+    @SuppressLint("MissingInflatedId", "WrongThread")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setTheme(R.style.AppTheme)
@@ -83,13 +83,14 @@ class MainActivity : AppCompatActivity() {
 
         // Create and show the loading dialog
         val ld_suc = LoadingDialog(this)
-        ld_suc.setLoadingText("Loading")
-            .setSuccessText("Images fully loaded!") // Show text when the images are successfully loaded
-            .setFailedText("Failed to load images")
+        ld_suc.setLoadingText("Загрузка")
+            .setSuccessText("Изображения полностью загружены!") // Show text when the images are successfully loaded
+            .setFailedText("Не удалось загрузить изображения")
             .show()
 
         // Get the ProgressBar and EditText views
-        val progressBar = findViewById(R.id.progress_Bar_1) as ProgressBar
+//        val progressBar = findViewById(R.id.progress_Bar_1)
+        val progressBar = findViewById<ProgressBar>(R.id.progress_Bar)
         val editText = findViewById<View>(R.id.textinput) as EditText
         editText.isEnabled = false // Disable the EditText
 
@@ -135,13 +136,17 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
                         if (OriginImageSet.size == 0) {
-                            val toast = Toast.makeText(
-                                this@MainActivity,
-                                "There are no images in the specified time period, please change the time period",
-                                Toast.LENGTH_LONG
-                            )
-                            toast.setGravity(Gravity.CENTER, 0, 0)
-                            toast.show()
+
+                            if (!isToastShown) {
+                                val toast = Toast.makeText(
+                                    this@MainActivity,
+                                    "В указанный период времени нет изображений, пожалуйста, измените период времени",
+                                    Toast.LENGTH_SHORT
+                                )
+                                toast.show()
+                                isToastShown = true
+                            }
+
                             val intent = Intent(this, ChoiceActivity::class.java)
                             val options = ActivityOptions.makeCustomAnimation(
                                 this,
@@ -163,8 +168,10 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             IsCheckLoadFailed = true
-            OriginImageSet = addImagesToList(sharedata.originImagePath, OriginImageSet)
+            //OriginImageSet = addImagesToList(sharedata.originImagePath, OriginImageSet)
+            OriginImageSet = sharedata.originImagePath!!
         }
+
 
         if (IsCheckLoadFailed) {
             // Create a thread group to load images
@@ -181,59 +188,49 @@ class MainActivity : AppCompatActivity() {
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             }
+
             // Create a copy of the loaded images to share
-            val ShareImageSet: List<Bitmap?> = ArrayList(ImageSet)
+            ShareImageSet = ArrayList(ImageSet)
+            //save_ShareImageSet()
+            Log.d("", "Значение первого элемента imageSet: $ShareImageSet")
             sharedata.imageSet = ShareImageSet
+
             var module_image: Module? = null
             val module_text: Module
             try {
                 // Load PyTorch models for image and text encoding
                 module_image = LiteModuleLoader.load(assetFilePath(this, "image_encode.ptl"))
                 module_text = LiteModuleLoader.load(assetFilePath(this, "tiny_text_encode.ptl"))
-                sharedata.setModule_image(module_image)
+                sharedata.module_image = module_image
                 sharedata.module_text = module_text
             } catch (e: IOException) {
                 Log.e("PytorchHelloWorld", "Error reading assets", e)
                 finish()
             }
             // Hide the progress bar
-            progressBar.setVisibility(View.GONE)
+            progressBar.visibility = View.GONE
             if (IsCheckPhotoUpload) {
-                // Prepare image features for similarity calculation
-                var t_tensor: Tensor? = null
-                ImageFeatureSet = arrayOfNulls(ImageSet.size)
-                for (i in ImageSet.indices) {
-                    // Resize the image to fit the input tensor dimensions
-                    ImageSet[i] = resizeImage(ImageSet[i], INPUT_TENSOR_WIDTH, INPUT_TENSOR_HEIGHT)
-                    // Convert the image to a float tensor
-                    t_tensor = TensorImageUtils.bitmapToFloat32Tensor(
-                        ImageSet[i],
-                        TORCHVISION_NORM_MEAN_RGB,
-                        TORCHVISION_NORM_STD_RGB,
-                        MemoryFormat.CHANNELS_LAST
-                    )
-                    // Encode the image tensor to a feature tensor
-                    t_tensor = module_image!!.forward(IValue.from(t_tensor)).toTensor()
-                    ImageFeatureSet[i] = t_tensor.dataAsFloatArray
-                }
-                // Hide the progress bar
-                progressBar.setVisibility(View.GONE)
-                // Notify the user that the images have been loaded successfully
-                ld_suc.loadSuccess()
-                if (IsCheckSavePath) {
-                    // Save the encoded image features to a file
-                    save()
-                }
-                sharedata.imageSetFeature = ImageFeatureSet
+                val task = ImageProcessingTask(ImageSet, sharedata, object : ImageProcessingListener {
+                    override fun onImageProcessingComplete() {
+                        // Hide the progress bar
+                        progressBar.setVisibility(View.GONE)
+                        // Notify the user that the images have been loaded successfully
+                        ld_suc.loadSuccess()
+                        if (IsCheckSavePath) {save(sharedata.imageSetFeature)}
+                    }
+                })
+                task.execute()
             } else {
                 // Notify the user that the images have been loaded successfully
                 ld_suc.loadSuccess()
             }
             try {
-                // Initialize Simple_tokenize with a Tokenizer object that reads from "vocab.txt"
-                val Simple_tokenize = Tokenizer(assetFilePath(this, "vocab.txt"))
                 // Enable editing of the editText field
                 editText.isEnabled = true
+
+                // Initialize Simple_tokenize with a Tokenizer object that reads from "vocab.txt"
+                val Simple_tokenize = Tokenizer(assetFilePath(this, "vocab.txt"))
+
                 // Set an action listener to editText for when the user inputs text and presses the search button
                 editText.setOnEditorActionListener { v, actionId, event ->
                     if (actionId == EditorInfo.IME_ACTION_SEARCH) {
@@ -280,18 +277,24 @@ class MainActivity : AppCompatActivity() {
     // The start token and end token are retrieved from the tokenizer
     // The text is encoded using the tokenizer and then added to the integer array of tokens
     // The final integer array is returned
-    fun tokenize(text: String, context_length: Int, Simple_tokenize: Tokenizer?): IntArray {
-        val startToken: Int = Tokenizer.Companion.encoder.get("")!!
-        val endToken: Int = Tokenizer.Companion.encoder.get("")!!
-        val textToken: IntArray = Tokenizer.Companion.encode(text)
+    fun tokenize(text: String?, context_length: Int, Simple_tokenize: Tokenizer?): IntArray? {
+        val startToken = Tokenizer.encoder["<|startoftext|>"]
+        val endToken = Tokenizer.encoder["<|endoftext|>"]
+        val textToken = text?.let { Tokenizer.encode(it) }
         val allToken = IntArray(context_length)
         for (i in 0 until context_length) {
             if (i == 0) {
-                allToken[i] = startToken
-            } else if (i < textToken.size + 1 && i > 0) {
-                allToken[i] = textToken[i - 1]
-            } else if (i == textToken.size + 1) {
-                allToken[i] = endToken
+                if (startToken != null) {
+                    allToken[i] = startToken
+                }
+            } else if (textToken != null) {
+                if (i < textToken.size + 1 && i > 0) {
+                    allToken[i] = textToken[i - 1]
+                } else if (i == textToken.size + 1) {
+                    if (endToken != null) {
+                        allToken[i] = endToken
+                    }
+                }
             }
         }
         return allToken
@@ -313,7 +316,7 @@ class MainActivity : AppCompatActivity() {
         return imageFileList
     }
 
-    fun save() {
+    fun save(saveImageFeatureSet: Array<FloatArray?>) {
         // Retrieve SharedPreferences object
         mSharedPref = getSharedPreferences("myPrefs", MODE_PRIVATE)
         // Retrieve Editor object
@@ -323,7 +326,7 @@ class MainActivity : AppCompatActivity() {
             .registerTypeAdapter(FloatArray::class.java, FloatArrayAdapter())
             .create()
         // Convert ImageFeatureSet to JSON string using Gson
-        val json = gson.toJson(ImageFeatureSet)
+        val json = gson.toJson(saveImageFeatureSet)
         // Save JSON string to SharedPreferences
         mEditor?.putString("photo_urls", json)
         mEditor?.apply()
@@ -337,9 +340,24 @@ class MainActivity : AppCompatActivity() {
         // Initialize Gson object
         val gson = Gson()
         // Convert OriginImagePath to JSON string using Gson
-        val json = gson.toJson(OriginImagePath)
+        val json = gson.toJson(OriginImageSet)
         // Save JSON string to SharedPreferences
         mEditor?.putString("images_path", json)
+        mEditor?.apply()
+    }
+
+
+    fun save_ShareImageSet() {
+        // Retrieve SharedPreferences object
+        var mSharedPref_imageSet = getSharedPreferences("myPrefs_imageSet", MODE_PRIVATE)
+        // Retrieve Editor object
+        val mEditor = mSharedPref_imageSet?.edit()
+        // Initialize Gson object
+        val gson = Gson()
+        // Convert OriginImagePath to JSON string using Gson
+        val json = gson.toJson(ShareImageSet)
+        // Save JSON string to SharedPreferences
+        mEditor?.putString("imageSet", json)
         mEditor?.apply()
     }
 
@@ -364,6 +382,7 @@ class MainActivity : AppCompatActivity() {
         val myThread = arrayOfNulls<MyThread_load_image>(num_thread)
         val basesize = imageSize / num_thread
         val lastsize = imageSize % num_thread
+
         for (i in myThread.indices) {
             // Distribute the workload evenly across the threads except for the last thread which may have more work to do.
             if (i != myThread.size - 1) {
